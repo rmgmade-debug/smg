@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Second Mind</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0f1115;
+            color: #f1f1f1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: #181b22;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #262a35;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: #9aa0a6;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .user-message {
+            background-color: #2b313d;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            background-color: #181b22;
+            color: #e3e3e3;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #262a35;
+        }
+
+        .ai-message img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: block;
+        }
+
+        .search-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #8ab4f8;
+            background: rgba(138, 180, 248, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .typing {
+            color: #9aa0a6;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .input-area {
+            background-color: #181b22;
+            padding: 12px 16px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #262a35;
+            align-items: flex-end;
+        }
+
+        textarea {
+            flex: 1;
+            background-color: #0f1115;
+            border: 1px solid #262a35;
+            border-radius: 10px;
+            color: #ffffff;
+            padding: 12px;
+            font-size: 15px;
+            resize: none;
+            max-height: 120px;
+            outline: none;
+            line-height: 1.4;
+        }
+
+        textarea:focus {
+            border-color: #4a5568;
+        }
+
+        .send-btn {
+            background-color: #ffffff;
+            color: #0f1115;
+            border: none;
+            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .send-btn:active {
+            background-color: #d1d5db;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #181b22;
+            padding: 24px;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #262a35;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-content h3 {
+            font-size: 18px;
+            color: #fff;
+        }
+
+        .modal-content input {
+            background: #0f1115;
+            border: 1px solid #262a35;
+            padding: 12px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .modal-content button {
+            background: #ffffff;
+            color: #0f1115;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <span class="header-title">Second Mind</span>
+        <button class="settings-btn" onclick="openSettings()">⚙️</button>
+    </header>
+
+    <div id="chat-container">
+        <div class="message ai-message">Ready. Drop your command. Search the web, pull facts, or render visuals straight on point.</div>
+    </div>
+
+    <div class="input-area">
+        <textarea id="user-input" rows="1" placeholder="Type a command or request..." oninput="autoGrow(this)" onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">→</button>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h3>Google AI Studio Key</h3>
+            <p style="font-size: 13px; color: #9aa0a6; line-height: 1.4;">Paste your free API key below. It's stored locally only on your device.</p>
+            <input type="password" id="api-key-input" placeholder="Paste API Key here...">
+            <button onclick="saveApiKey()">Save & Connect</button>
+        </div>
+    </div>
+
+    <script>
+        let apiKey = localStorage.getItem('gemini_api_key') || '';
+        
+        // Chat history storage
+        let chatHistory = [
+            {
+                role: "user",
+                parts: [{ text: "System Instructions: You are a direct, street-smart second mind assistant. Skip all corporate fluff, pleasantries, and AI robotic talk. Speak straight to the point, clear and concise. You have access to Google Search grounding when current facts are needed, and image generation when requested." }]
+            },
+            {
+                role: "model",
+                parts: [{ text: "Understood. Direct communication active. Ready." }]
+            }
+        ];
+
+        window.onload = function() {
+            if (!apiKey) {
+                document.getElementById('settings-modal').style.display = 'flex';
+            }
+        };
+
+        function openSettings() {
+            document.getElementById('api-key-input').value = apiKey;
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function saveApiKey() {
+            const val = document.getElementById('api-key-input').value.trim();
+            if (val) {
+                apiKey = val;
+                localStorage.setItem('gemini_api_key', apiKey);
+                document.getElementById('settings-modal').style.display = 'none';
+            }
+        }
+
+        function autoGrow(element) {
+            element.style.height = '5px';
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const inputField = document.getElementById('user-input');
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            if (!apiKey) {
+                alert('Please set your Google AI Studio API key via settings first.');
+                openSettings();
+                return;
+            }
+
+            inputField.value = '';
+            inputField.style.height = 'auto';
+
+            appendMessage(text, 'user-message');
+
+            const container = document.getElementById('chat-container');
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai-message typing';
+            loadingDiv.id = loadingId;
+            loadingDiv.innerText = 'Thinking...';
+            container.appendChild(loadingDiv);
+            container.scrollTop = container.scrollHeight;
+
+            chatHistory.push({ role: "user", parts: [{ text: text }] });
+
+            // Check if user is asking for image generation
+            const isImageRequest = /generate image|create an image|render|draw|visualize|photo of/i.test(text);
+            
+            if (isImageRequest) {
+                await handleImageGeneration(text, loadingId);
+            } else {
+                await handleTextAndSearch(loadingId);
+            }
+        }
+
+        async function handleTextAndSearch(loadingId) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: chatHistory,
+                tools: [{ googleSearch: {} }]
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+
+                if (data.candidates && data.candidates[0].content) {
+                    const candidate = data.candidates[0];
+                    const replyText = candidate.content.parts[0].text;
+                    
+                    // Check if grounding metadata exists
+                    let usedSearch = false;
+                    if (candidate.groundingMetadata && candidate.groundingMetadata.webSearchQueries) {
+                        usedSearch = true;
+                    }
+
+                    chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+                    
+                    let htmlContent = '';
+                    if (usedSearch) {
+                        htmlContent += `<div class="search-badge">🔍 Pulled via Google Search</div><br>`;
+                    }
+                    htmlContent += escapeHtml(replyText);
+
+                    appendHtmlMessage(htmlContent, 'ai-message');
+                } else {
+                    appendMessage('Error processing request.', 'ai-message');
+                }
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                appendMessage('Connection error. Check network or API key.', 'ai-message');
+            }
+        }
+
+        async function handleImageGeneration(promptText, loadingId) {
+            // Using imagen-3.0-generate-002 for free tier image rendering support if available, or fallback
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+            
+            const payload = {
+                instances: [{ prompt: promptText }],
+                parameters: { sampleCount: 1, aspectRatios: "1:1" }
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId).remove();
+
+                if (data.predictions && data.predictions[0].bytesBase64Encoded) {
+                    const base64Image = data.predictions[0].bytesBase64Encoded;
+                    const imageUrl = `data:image/jpeg;base64,${base64Image}`;
+                    
+                    chatHistory.push({ role: "model", parts: [{ text: `[Generated Visual for: ${promptText}]` }] });
+
+                    const container = document.getElementById('chat-container');
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'message ai-message';
+                    msgDiv.innerHTML = `Visual rendered:<br><img src="${imageUrl}" alt="Generated Image">`;
+                    container.appendChild(msgDiv);
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    // Fallback to text model if image model endpoint requires separate SKU
+                    handleTextAndSearch(loadingId);
+                }
+            } catch (err) {
+                document.getElementById(loadingId).remove();
+                appendMessage('Visual generation error. Falling back or check permissions.', 'ai-message');
+            }
+        }
+
+        function appendMessage(text, className) {
+            const container = document.getElementById('chat-container');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${className}`;
+            msgDiv.innerText = text;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendHtmlMessage(html, className) {
+            const container = document.getElementById('chat-container');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${className}`;
+            msgDiv.innerHTML = html;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
